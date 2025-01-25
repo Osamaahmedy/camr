@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>مسح QR Code</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jsQR/1.4.0/jsQR.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            margin: 0;
+            padding: 20px;
+            background-color: #f4f4f4;
+        }
+        h1 {
+            color: #333;
+        }
+        #scanner {
+            width: 100%;
+            max-width: 400px;
+            height: auto;
+            border: 2px solid #ccc;
+            border-radius: 10px;
+            margin: 20px auto;
+        }
+        #result {
+            margin-top: 20px;
+            font-size: 18px;
+            color: green;
+        }
+        .error {
+            color: red;
+        }
+        .button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            margin-top: 20px;
+        }
+        .button:hover {
+            background-color: #0056b3;
+        }
+    </style>
+</head>
+<body>
+    <h1>مسح QR Code</h1>
+    <video id="scanner" playsinline></video>
+    <div id="result"></div>
+    <button class="button" onclick="startCamera()">إعادة تشغيل الكاميرا</button>
+
+    <script>
+        const products = [
+            { "id": "12345", "name": "Product 1", "price": "10$" },
+            { "id": "67890", "name": "Product 2", "price": "20$" },
+            { "id": "11223", "name": "Product 3", "price": "15$" }
+        ];
+
+        const video = document.getElementById('scanner');
+        const resultDiv = document.getElementById('result');
+
+        // طلب إذن استخدام الكاميرا
+        function startCamera() {
+            navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } })
+                .then(stream => {
+                    video.srcObject = stream;
+                    video.play();
+                    requestAnimationFrame(scanQR);
+                })
+                .catch(err => {
+                    resultDiv.innerHTML = `<div class="error">خطأ في الوصول إلى الكاميرا: ${err.name} - ${err.message}</div>`;
+                    console.error("Camera error:", err);
+                });
+        }
+
+        // مسح QR Code
+        function scanQR() {
+            if (video.readyState === video.HAVE_ENOUGH_DATA) {
+                const canvas = document.createElement('canvas');
+                canvas.width = video.videoWidth;
+                canvas.height = video.videoHeight;
+                const context = canvas.getContext('2d');
+                context.drawImage(video, 0, 0, canvas.width, canvas.height);
+                const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
+                const code = jsQR(imageData.data, imageData.width, imageData.height, {
+                    inversionAttempts: "dontInvert",
+                });
+
+                if (code) {
+                    const product = products.find(item => item.id === code.data);
+                    if (product) {
+                        resultDiv.innerHTML = `
+                            <strong>تم العثور على المنتج!</strong><br>
+                            الرمز: ${product.id}<br>
+                            الاسم: ${product.name}<br>
+                            السعر: ${product.price}
+                        `;
+                    } else {
+                        resultDiv.innerHTML = `<div class="error">المنتج غير موجود!</div>`;
+                    }
+                } else {
+                    requestAnimationFrame(scanQR);
+                }
+            } else {
+                requestAnimationFrame(scanQR);
+            }
+        }
+
+        // بدء التشغيل عند تحميل الصفحة
+        startCamera();
+    </script>
+</body>
+</html>
