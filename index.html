@@ -54,12 +54,6 @@
     <button class="button" onclick="startCamera()">إعادة تشغيل الكاميرا</button>
 
     <script>
-        const products = [
-            { "id": "12345", "name": "Product 1", "price": "10$" },
-            { "id": "67890", "name": "Product 2", "price": "20$" },
-            { "id": "11223", "name": "Product 3", "price": "15$" }
-        ];
-
         const video = document.getElementById('scanner');
         const resultDiv = document.getElementById('result');
         let codeReader;
@@ -75,21 +69,14 @@
             codeReader.decodeFromVideoDevice(null, video, (result, err) => {
                 if (result) {
                     console.log("QR Code detected:", result.text); // رسالة تصحيح
-                    const product = products.find(item => item.id === result.text);
-                    if (product) {
-                        resultDiv.innerHTML = `
-                            <strong>تم العثور على المنتج!</strong><br>
-                            الرمز: ${product.id}<br>
-                            الاسم: ${product.name}<br>
-                            السعر: ${product.price}
-                        `;
-                    } else {
-                        resultDiv.innerHTML = `<div class="error">المنتج غير موجود!</div>`;
-                        console.log("Product not found for code:", result.text); // رسالة تصحيح
-                    }
+                    resultDiv.innerHTML = `
+                        <strong>تم مسح QR Code بنجاح!</strong><br>
+                        البيانات: ${result.text}
+                    `;
                 }
                 if (err) {
                     console.error("Error scanning QR Code:", err); // رسالة تصحيح
+                    resultDiv.innerHTML = `<div class="error">خطأ في قراءة QR Code!</div>`;
                 }
             });
         }
