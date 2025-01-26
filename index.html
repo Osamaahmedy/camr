@@ -28,6 +28,14 @@
             margin-top: 20px;
             font-size: 18px;
             color: green;
+            background-color: #fff;
+            padding: 15px;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            max-width: 600px;
+            margin-left: auto;
+            margin-right: auto;
+            text-align: left;
         }
         .error {
             color: red;
@@ -45,18 +53,40 @@
         .button:hover {
             background-color: #0056b3;
         }
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+        }
+        .data-table th, .data-table td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: center;
+        }
+        .data-table th {
+            background-color: #f2f2f2;
+        }
+        .clear-button {
+            background-color: #dc3545;
+            margin-left: 10px;
+        }
+        .clear-button:hover {
+            background-color: #c82333;
+        }
     </style>
 </head>
 <body>
     <h1>مسح QR Code</h1>
     <video id="scanner" playsinline></video>
     <div id="result"></div>
-    <button class="button" onclick="startCamera()">إعادة تشغيل الكاميرا</button>
+    <button class="button" onclick="startCamera()">بدء المسح</button>
+    <button class="button clear-button" onclick="clearData()">مسح البيانات</button>
 
     <script>
         const video = document.getElementById('scanner');
         const resultDiv = document.getElementById('result');
         let codeReader;
+        let isScanning = false;
 
         // تهيئة ZXing
         function initScanner() {
@@ -64,26 +94,79 @@
             console.log("ZXing initialized.");
         }
 
-        // طلب إذن استخدام الكاميرا
+        // بدء المسح
         function startCamera() {
+            if (isScanning) return; // إذا كان المسح قيد التشغيل، لا تفعل شيئًا
+
+            isScanning = true;
             codeReader.decodeFromVideoDevice(null, video, (result, err) => {
                 if (result) {
                     console.log("QR Code detected:", result.text); // رسالة تصحيح
-                    resultDiv.innerHTML = `
-                        <strong>تم مسح QR Code بنجاح!</strong><br>
-                        البيانات: ${result.text}
-                    `;
+                    stopCamera(); // إيقاف الكاميرا بعد المسح الناجح
+                    try {
+                        const data = JSON.parse(result.text); // تحويل JSON إلى كائن
+                        saveData(data); // حفظ البيانات
+                        displayData(data); // عرض البيانات
+                    } catch (e) {
+                        resultDiv.innerHTML = `<div class="error">خطأ في تحليل بيانات JSON!</div>`;
+                    }
                 }
-                if (err) {
+                if (err && !result) {
                     console.error("Error scanning QR Code:", err); // رسالة تصحيح
-                    resultDiv.innerHTML = `<div class="error">خطأ في قراءة QR Code!</div>`;
                 }
             });
         }
 
+        // إيقاف الكاميرا
+        function stopCamera() {
+            if (codeReader) {
+                codeReader.reset(); // إيقاف المسح
+                isScanning = false;
+                console.log("Camera stopped.");
+            }
+        }
+
+        // حفظ البيانات في localStorage
+        function saveData(data) {
+            let storedData = JSON.parse(localStorage.getItem('qrData')) || [];
+            storedData.push(data);
+            localStorage.setItem('qrData', JSON.stringify(storedData));
+        }
+
+        // عرض البيانات من localStorage
+        function displayData(data = null) {
+            let storedData = JSON.parse(localStorage.getItem('qrData')) || [];
+            if (data) {
+                storedData = [data]; // عرض البيانات الجديدة فقط
+            }
+            if (storedData.length === 0) {
+                resultDiv.innerHTML = `<div>لا توجد بيانات مخزنة.</div>`;
+                return;
+            }
+            let tableHTML = '<table class="data-table">';
+            storedData.forEach((item, index) => {
+                tableHTML += `<tr><th colspan="2">البيانات ${index + 1}</th></tr>`;
+                for (const key in item) {
+                    tableHTML += `
+                        <tr>
+                            <td><strong>${key}</strong></td>
+                            <td>${item[key]}</td>
+                        </tr>`;
+                }
+            });
+            tableHTML += '</table>';
+            resultDiv.innerHTML = tableHTML;
+        }
+
+        // مسح البيانات من localStorage
+        function clearData() {
+            localStorage.removeItem('qrData');
+            resultDiv.innerHTML = `<div>تم مسح البيانات بنجاح.</div>`;
+        }
+
         // بدء التشغيل عند تحميل الصفحة
         initScanner();
-        startCamera();
+        displayData(); // عرض البيانات المخزنة عند تحميل الصفحة
     </script>
 </body>
 </html>
